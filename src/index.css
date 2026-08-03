@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@theme {
+  --color-ink: #0b3d2e;
+  --color-ink-2: #14654b;
+  --color-sand: #f2efe6;
+  --color-sand-press: #eae5d8;
+  --color-key-press: #e4ded0;
+  --color-card: #ffffff;
+  --color-line: #dad4c4;
+  --color-muted: #6e7a72;
+  --color-track: #ece7da;
+  --color-danger: #b23a2e;
+  --color-danger-bg: #f7e4e1;
+  --color-warn: #c77a15;
+  --color-disabled: #b9c3bc;
+  --color-on-ink: #eaf3ee;
+  --color-on-ink-muted: #9fc4b3;
+  --color-on-ink-danger: #f3b4ac;
+
+  --font-sans: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+
+  --radius-card: 18px;
+  --radius-sheet: 26px;
+
+  --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(11, 61, 46, 0.25);
+  --shadow-sheet: 0 -10px 40px -10px rgba(0, 0, 0, 0.3);
+
+  --animate-rise: rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(30px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-sand);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  input {
+    font-family: inherit;
+  }
+
+  /* Spinners on the budget field would sit under the thumb on mobile. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+}
