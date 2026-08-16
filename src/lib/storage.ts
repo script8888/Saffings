@@ -10,18 +10,30 @@ const KEY = "wallets_v1";
 function defaultState(): AppState {
   return {
     month: currentMonth(),
+    weekStart: 0,
     cats: [
-      { id: makeId(), name: "Flexing", budget: 0, color: "#B23A2E", tx: [] },
-      { id: makeId(), name: "Food", budget: 0, color: "#14654B", tx: [] },
-      { id: makeId(), name: "Utilities", budget: 0, color: "#C77A15", tx: [] },
-      { id: makeId(), name: "Light bill", budget: 0, color: "#2E5A9E", tx: [] },
-      { id: makeId(), name: "Fuel", budget: 0, color: "#4A4A4A", tx: [] },
+      seed("Flexing", "#B23A2E"),
+      seed("Food", "#14654B"),
+      seed("Utilities", "#C77A15"),
+      seed("Light bill", "#2E5A9E"),
+      seed("Fuel", "#4A4A4A"),
     ],
   };
 }
 
+function seed(name: string, color: string): Wallet {
+  return { id: makeId(), name, budget: 0, color, tx: [], settledAt: 0 };
+}
+
 function num(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/** Anything that isn't a whole 0-6 falls back to Sunday. */
+function clampDay(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 6
+    ? value
+    : 0;
 }
 
 function normalizeTx(raw: unknown): Transaction {
@@ -42,6 +54,7 @@ function normalizeWallet(raw: unknown): Wallet {
     budget: num(w.budget),
     color: typeof w.color === "string" ? w.color : "#14654B",
     tx: Array.isArray(w.tx) ? w.tx.map(normalizeTx) : [],
+    settledAt: num(w.settledAt),
   };
 }
 
@@ -55,6 +68,7 @@ export function normalizeState(raw: unknown): AppState | null {
   if (!Array.isArray(s.cats)) return null;
   return {
     month: typeof s.month === "string" && s.month ? s.month : currentMonth(),
+    weekStart: clampDay(s.weekStart),
     cats: s.cats.map(normalizeWallet),
   };
 }

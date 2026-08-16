@@ -1,15 +1,17 @@
 import type { Wallet } from "../types";
 import { formatNaira } from "../lib/format";
-import { barColorOf, barPctOf, leftOf } from "../lib/wallet";
+import { barColorOf, barPctOf, leftOf, spentSince, weekWindowStart } from "../lib/wallet";
 
 type Props = {
   wallet: Wallet;
+  weekStart: number;
   onClick: () => void;
 };
 
-export function WalletCard({ wallet, onClick }: Props) {
+export function WalletCard({ wallet, weekStart, onClick }: Props) {
   const left = leftOf(wallet);
   const over = left < 0;
+  const thisWeek = spentSince(wallet, weekWindowStart(wallet, weekStart));
 
   return (
     <button
@@ -37,7 +39,11 @@ export function WalletCard({ wallet, onClick }: Props) {
         </span>
       </div>
 
-      <div className="mt-[13px] h-2 overflow-hidden rounded-full bg-track">
+      <div className="mt-2 text-xs font-semibold text-muted">
+        {formatNaira(thisWeek)} this week
+      </div>
+
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-track">
         <div
           className="h-full rounded-full transition-[width] duration-300"
           style={{ width: `${barPctOf(wallet)}%`, background: barColorOf(wallet) }}

@@ -1,5 +1,15 @@
 import type { Wallet } from "../types";
 
+export const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 export const COLORS = [
   "#14654B",
   "#B23A2E",
@@ -17,6 +27,34 @@ export function spentOf(wallet: Wallet): number {
 
 export function leftOf(wallet: Wallet): number {
   return wallet.budget - spentOf(wallet);
+}
+
+/**
+ * Midnight local time on the most recent `weekStart` day at or before `now`.
+ * Local-time arithmetic (not UTC offsets) so it stays correct across DST.
+ */
+export function startOfWeek(weekStart: number, now: number = Date.now()): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() - weekStart + 7) % 7));
+  return d.getTime();
+}
+
+/**
+ * Start of the wallet's current weekly window: the later of the calendar week
+ * start and its own manual settle. Taking the max is what makes a manual
+ * settle expire on its own once the next week begins — nothing to clean up.
+ */
+export function weekWindowStart(
+  wallet: Wallet,
+  weekStart: number,
+  now: number = Date.now(),
+): number {
+  return Math.max(startOfWeek(weekStart, now), wallet.settledAt);
+}
+
+export function spentSince(wallet: Wallet, since: number): number {
+  return wallet.tx.reduce((sum, t) => (t.date >= since ? sum + t.amt : sum), 0);
 }
 
 export function totals(wallets: Wallet[]): { budget: number; spent: number; left: number } {

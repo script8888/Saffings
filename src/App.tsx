@@ -5,7 +5,7 @@ import { SpendSheet } from "./components/SpendSheet";
 import { CategorySheet } from "./components/CategorySheet";
 import { DetailSheet } from "./components/DetailSheet";
 import { currentMonth, formatSigned } from "./lib/format";
-import { COLORS, totals } from "./lib/wallet";
+import { COLORS, DAY_NAMES, totals } from "./lib/wallet";
 import { normalizeState } from "./lib/storage";
 
 type SheetState =
@@ -90,6 +90,7 @@ export default function App() {
           <WalletCard
             key={wallet.id}
             wallet={wallet}
+            weekStart={state.weekStart}
             onClick={() => setSheet({ kind: "detail", walletId: wallet.id })}
           />
         ))}
@@ -128,6 +129,21 @@ export default function App() {
         </button>
       </div>
 
+      <label className="mt-3.5 flex items-center justify-center gap-2 text-xs font-semibold text-muted">
+        Week starts on
+        <select
+          value={state.weekStart}
+          onChange={(e) => wallets.setWeekStart(Number(e.target.value))}
+          className="rounded-lg border border-line bg-card px-2 py-1 font-bold text-ink-2"
+        >
+          {DAY_NAMES.map((day, i) => (
+            <option key={day} value={i}>
+              {day}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <p className="mt-4 px-5 text-center text-xs leading-relaxed text-muted">
         Tap a wallet to record spending. Data is saved on this phone only — back up now
         and then so you don't lose it.
@@ -159,9 +175,11 @@ export default function App() {
       {sheet.kind === "detail" && activeWallet && (
         <DetailSheet
           wallet={activeWallet}
+          weekStart={state.weekStart}
           onClose={close}
           onSpend={() => setSheet({ kind: "spend", walletId: activeWallet.id })}
           onEdit={() => setSheet({ kind: "category", walletId: activeWallet.id })}
+          onMarkWithdrawn={() => wallets.markWithdrawn(activeWallet.id)}
           onDeleteTx={(txId) => wallets.deleteTransaction(activeWallet.id, txId)}
         />
       )}

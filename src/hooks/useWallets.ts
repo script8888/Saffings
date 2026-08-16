@@ -24,7 +24,7 @@ export function useWallets() {
     addWallet(draft: WalletDraft) {
       setState((s) => ({
         ...s,
-        cats: [...s.cats, { id: makeId(), ...draft, tx: [] }],
+        cats: [...s.cats, { id: makeId(), ...draft, tx: [], settledAt: 0 }],
       }));
     },
 
@@ -50,11 +50,21 @@ export function useWallets() {
       }));
     },
 
+    /** Restarts this wallet's weekly figure from now, without deleting anything. */
+    markWithdrawn(walletId: string) {
+      mapWallet(walletId, (w) => ({ ...w, settledAt: Date.now() }));
+    },
+
+    setWeekStart(day: number) {
+      setState((s) => ({ ...s, weekStart: day }));
+    },
+
     /** Clears every record but keeps the wallets and their budgets. */
     startNewMonth() {
       setState((s) => ({
+        ...s,
         month: currentMonth(),
-        cats: s.cats.map((w) => ({ ...w, tx: [] })),
+        cats: s.cats.map((w) => ({ ...w, tx: [], settledAt: 0 })),
       }));
     },
 
