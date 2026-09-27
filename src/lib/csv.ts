@@ -1,4 +1,5 @@
 import type { Wallet } from "../types";
+import { totals } from "./wallet";
 
 /** Quotes a cell only when it holds a comma, quote or line break, doubling inner quotes. */
 function cell(value: string | number): string {
@@ -13,7 +14,7 @@ function pad(n: number): string {
 /**
  * Every record across all wallets, oldest first so it reads in the same order
  * as a bank statement. Local date and time; amounts stay bare numbers so a
- * spreadsheet can sum them.
+ * spreadsheet can sum them. Ends with the month's total budget under Amount.
  */
 export function monthCsv(wallets: Wallet[]): string {
   const rows = wallets
@@ -31,5 +32,7 @@ export function monthCsv(wallets: Wallet[]): string {
         .map(cell)
         .join(",");
     });
-  return ["Date,Time,Category,Note,Amount", ...rows].join("\r\n");
+  // The blank line keeps the total out of the range a spreadsheet sorts or filters.
+  const budget = `,,,Total budget,${totals(wallets).budget}`;
+  return ["Date,Time,Category,Note,Amount", ...rows, "", budget].join("\r\n");
 }
