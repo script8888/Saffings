@@ -7,6 +7,7 @@ import { DetailSheet } from "./components/DetailSheet";
 import { currentMonth, formatSigned } from "./lib/format";
 import { COLORS, DAY_NAMES, totals } from "./lib/wallet";
 import { normalizeState } from "./lib/storage";
+import { monthCsv } from "./lib/csv";
 
 type SheetState =
   | { kind: "none" }
@@ -29,16 +30,28 @@ export default function App() {
   const activeWallet = state.cats.find((w) => w.id === activeId) ?? null;
   const left = totals(state.cats).left;
 
-  function backUp() {
-    const blob = new Blob([JSON.stringify(state, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
+  function download(filename: string, text: string, type: string) {
+    const url = URL.createObjectURL(new Blob([text], { type }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `wallets-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  function backUp() {
+    download(`wallets-backup-${today()}.json`, JSON.stringify(state, null, 2), "application/json");
+  }
+
+  function exportCsv() {
+    if (!state.cats.some((w) => w.tx.length > 0)) {
+      alert("No spending recorded this month yet.");
+      return;
+    }
+    // The BOM makes Excel read the file as UTF-8, so non-ASCII notes survive.
+    download(`wallets-log-${today()}.csv`, "﻿" + monthCsv(state.cats), "text/csv");
   }
 
   function restore(file: File) {
@@ -128,6 +141,9 @@ export default function App() {
           Restore
         </button>
       </div>
+      <button type="button" className={`${FOOTER_BUTTON} mt-2.5 w-full`} onClick={exportCsv}>
+        Export month as CSV
+      </button>
 
       <label className="mt-3.5 flex items-center justify-center gap-2 text-xs font-semibold text-muted">
         Week starts on
