@@ -1,28 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppState, WalletDraft } from "../types";
 import { currentMonth } from "../lib/format";
 import { makeId } from "../lib/id";
-import { loadState, saveState } from "../lib/storage";
+import { saveState, watchState } from "../lib/storage";
 
-export function useWallets() {
-  const [state, setState] = useState<AppState>(loadState);
+/** The signed-in user's wallets, or null until Firestore has loaded them. */
+export function useWallets(uid: string) {
+  const [state, setState] = useState<AppState | null>(null);
+  // The last state Firestore sent, so it isn't written straight back.
+  const fromServer = useRef<AppState | null>(null);
+
+  useEffect(
+    () =>
+      watchState(
+        uid,
+        (next) => {
+          fromServer.current = next;
+          setState(next);
+        },
+        (e) => alert(`Couldn't load your data: ${e.message}`),
+      ),
+    [uid],
+  );
 
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (!state || state === fromServer.current) return;
+    saveState(uid, state).catch((e: Error) =>
+      alert(`Couldn't save your last change: ${e.message}`),
+    );
+  }, [uid, state]);
+
+  function update(fn: (s: AppState) => AppState) {
+    setState((s) => s && fn(s));
+  }
 
   function mapWallet(id: string, fn: (w: AppState["cats"][number]) => AppState["cats"][number]) {
-    setState((s) => ({
+    update((s) => ({
       ...s,
       cats: s.cats.map((w) => (w.id === id ? fn(w) : w)),
     }));
   }
 
+  if (!state) return null;
+
   return {
     state,
 
     addWallet(draft: WalletDraft) {
-      setState((s) => ({
+      update((s) => ({
         ...s,
         cats: [...s.cats, { id: makeId(), ...draft, tx: [], settledAt: 0 }],
       }));
@@ -33,7 +58,7 @@ export function useWallets() {
     },
 
     deleteWallet(id: string) {
-      setState((s) => ({ ...s, cats: s.cats.filter((w) => w.id !== id) }));
+      update((s) => ({ ...s, cats: s.cats.filter((w) => w.id !== id) }));
     },
 
     addTransaction(walletId: string, amt: number, note: string) {
@@ -56,12 +81,12 @@ export function useWallets() {
     },
 
     setWeekStart(day: number) {
-      setState((s) => ({ ...s, weekStart: day }));
+      update((s) => ({ ...s, weekStart: day }));
     },
 
     /** Clears every record but keeps the wallets and their budgets. */
     startNewMonth() {
-      setState((s) => ({
+      update((s) => ({
         ...s,
         month: currentMonth(),
         cats: s.cats.map((w) => ({ ...w, tx: [], settledAt: 0 })),

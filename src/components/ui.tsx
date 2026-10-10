@@ -35,6 +35,14 @@ export function DangerButton({ children, className = "", ...rest }: ButtonProps)
   );
 }
 
+export function Splash({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center text-sm font-semibold text-muted">
+      {children}
+    </div>
+  );
+}
+
 export function Field({ label, children }: { label?: string; children: ReactNode }) {
   return (
     <div className="mb-4">

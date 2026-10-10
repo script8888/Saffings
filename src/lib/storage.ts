@@ -1,11 +1,14 @@
+import { doc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import type { AppState, Transaction, Wallet } from "../types";
+import { db } from "./firebase";
 import { currentMonth } from "./format";
 import { makeId } from "./id";
 
-const KEY = "wallets_v1";
+/** Where the app kept everything before accounts existed. */
+const LOCAL_KEY = "wallets_v1";
 
-// The only place that touches persistence. Swapping localStorage for an API
-// means reimplementing loadState/saveState here and nothing else.
+// The only place that touches persistence. Each user's whole state is one
+// Firestore document, which the existing users/{uid}/** rule already guards.
 
 function defaultState(): AppState {
   return {
@@ -59,8 +62,9 @@ function normalizeWallet(raw: unknown): Wallet {
 }
 
 /**
- * Coerces untrusted JSON (localStorage or a restored backup file) into a usable
- * AppState. Returns null when the shape is too broken to be a backup at all.
+ * Coerces untrusted JSON (Firestore, old localStorage data or a restored backup
+ * file) into a usable AppState. Returns null when the shape is too broken to be
+ * a backup at all.
  */
 export function normalizeState(raw: unknown): AppState | null {
   if (!raw || typeof raw !== "object") return null;
@@ -73,21 +77,57 @@ export function normalizeState(raw: unknown): AppState | null {
   };
 }
 
-export function loadState(): AppState {
+function stateDoc(uid: string) {
+  return doc(db, "users", uid, "saffings", "state");
+}
+
+function readLocalState(): AppState | null {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultState();
-    return normalizeState(JSON.parse(raw)) ?? defaultState();
+    const raw = localStorage.getItem(LOCAL_KEY);
+    return raw ? normalizeState(JSON.parse(raw)) : null;
   } catch {
-    return defaultState();
+    return null;
   }
 }
 
-export function saveState(state: AppState): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    // Private-mode Safari and a full quota both throw; losing the write is
-    // better than crashing mid-entry.
-  }
+/**
+ * Streams the user's state from Firestore. On an account's first sign-in, data
+ * this device saved before accounts existed is uploaded, and cleared from the
+ * device only once the server has confirmed the write.
+ */
+export function watchState(
+  uid: string,
+  onState: (state: AppState) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  const ref = stateDoc(uid);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      // Our own writes echo back before the server confirms them, and the UI
+      // already shows them.
+      if (snap.metadata.hasPendingWrites) return;
+      if (snap.exists()) {
+        onState(normalizeState(snap.data()) ?? defaultState());
+        return;
+      }
+      // The offline cache not knowing the doc doesn't mean the server lacks it;
+      // uploading now could overwrite real data. Wait for the server's answer.
+      if (snap.metadata.fromCache) return;
+
+      const initial = readLocalState() ?? defaultState();
+      onState(initial);
+      setDoc(ref, initial)
+        .then(() => localStorage.removeItem(LOCAL_KEY))
+        .catch(onError);
+    },
+    onError,
+  );
+}
+
+// ponytail: whole-document last write wins. A device that edits before its
+// listener catches up overwrites the other device's newer changes; move to
+// per-wallet documents if that ever bites.
+export function saveState(uid: string, state: AppState): Promise<void> {
+  return setDoc(stateDoc(uid), state);
 }

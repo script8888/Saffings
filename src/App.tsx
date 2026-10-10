@@ -1,9 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { useWallets } from "./hooks/useWallets";
 import { WalletCard } from "./components/WalletCard";
 import { SpendSheet } from "./components/SpendSheet";
 import { CategorySheet } from "./components/CategorySheet";
 import { DetailSheet } from "./components/DetailSheet";
+import { SignIn } from "./components/SignIn";
+import { Splash } from "./components/ui";
+import { auth } from "./lib/firebase";
 import { currentMonth, formatSigned } from "./lib/format";
 import { COLORS, DAY_NAMES, totals } from "./lib/wallet";
 import { normalizeState } from "./lib/storage";
@@ -19,11 +23,22 @@ const FOOTER_BUTTON =
   "flex-1 rounded-[14px] border border-line bg-card p-[13px] text-sm font-bold text-ink-2 active:bg-sand-press";
 
 export default function App() {
-  const wallets = useWallets();
+  // undefined while Firebase restores a saved session.
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  useEffect(() => onAuthStateChanged(auth, setUser), []);
+
+  if (user === undefined) return <Splash>Loading…</Splash>;
+  if (!user) return <SignIn />;
+  return <Wallets key={user.uid} uid={user.uid} />;
+}
+
+function Wallets({ uid }: { uid: string }) {
+  const wallets = useWallets(uid);
   const [sheet, setSheet] = useState<SheetState>({ kind: "none" });
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const { state } = wallets;
+  if (!wallets) return <Splash>Loading your wallets…</Splash>;
+  const { state, replaceState } = wallets;
   const close = () => setSheet({ kind: "none" });
 
   const activeId = sheet.kind === "none" ? null : sheet.walletId;
@@ -69,7 +84,7 @@ export default function App() {
         return;
       }
       if (confirm("Restore this backup? It replaces everything currently in the app.")) {
-        wallets.replaceState(parsed);
+        replaceState(parsed);
         close();
       }
     };
@@ -161,8 +176,8 @@ export default function App() {
       </label>
 
       <p className="mt-4 px-5 text-center text-xs leading-relaxed text-muted">
-        Tap a wallet to record spending. Data is saved on this phone only — back up now
-        and then so you don't lose it.
+        Tap a wallet to record spending. Everything is saved to your Google account, so
+        it's there on any device you sign in on.
       </p>
 
       <input
