@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useWallets } from "./hooks/useWallets";
 import { WalletCard } from "./components/WalletCard";
 import { SpendSheet } from "./components/SpendSheet";
 import { CategorySheet } from "./components/CategorySheet";
 import { DetailSheet } from "./components/DetailSheet";
 import { SignIn } from "./components/SignIn";
-import { Splash } from "./components/ui";
+import { GhostButton, Splash } from "./components/ui";
 import { auth } from "./lib/firebase";
 import { currentMonth, formatSigned } from "./lib/format";
 import { COLORS, DAY_NAMES, totals } from "./lib/wallet";
@@ -179,6 +179,10 @@ function Wallets({ uid }: { uid: string }) {
         Tap a wallet to record spending. Everything is saved to your Google account, so
         it's there on any device you sign in on.
       </p>
+
+      <GhostButton type="button" onClick={() => signOut(auth)}>
+        Sign out of {auth.currentUser?.email}
+      </GhostButton>
 
       <input
         ref={fileInput}

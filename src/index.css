@@ -64,6 +64,11 @@
     font-family: inherit;
   }
 
+  /* Tailwind v4 dropped the pointer cursor on buttons. */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
   input {
     font-family: inherit;
   }
